@@ -1,0 +1,10 @@
+html,
+body,
+.container-fluid {
+    height: 100%;
+    background: #111;
+}
+
+.container-fluid {
+    padding: 25px;
+}

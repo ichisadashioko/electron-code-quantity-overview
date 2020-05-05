@@ -1,19 +1,34 @@
 import { app, BrowserWindow } from 'electron'
 import * as path from 'path'
+import * as url from 'url'
 
 function createWindow() {
     // create the browser window
     const mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
+        // set the background color to black
+        backgroundColor: '#111',
+        // set the title bar style
+        titleBarStyle: 'hiddenInset',
+        // don't show the window until it's ready, this prevents any white flickering
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            // nodeIntegration: true,
+            nodeIntegration: true,
         },
     })
 
-    // and load the index.html of the app
-    mainWindow.loadFile(path.join(__dirname, '../index.html'))
+    mainWindow.loadURL(url.format({
+        pathname: path.join(__dirname, '../index.html'),
+        protocol: 'file:',
+        slashes: true,
+    }))
+
+    mainWindow.once('ready-to-show', function () {
+        console.log(arguments)
+        mainWindow.show()
+    })
 
     // open the DevTools
     mainWindow.webContents.openDevTools()

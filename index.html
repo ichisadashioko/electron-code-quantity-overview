@@ -3,15 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Document</title>
+    <title>Activity Monitor</title>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>,
-    Chromium <span id="chrome-version"></span>,
-    and Electron <span id="electron-version"></span>.
+    <div class="container-fluid">
+        <canvas id="chart"></canvas>
+    </div>
 
+    <script>
+        exports = {}
+    </script>
     <script src="./dist/renderer.js"></script>
 </body>
 
