@@ -8,9 +8,12 @@
     "start": "npm run build && electron ./dist/main.js"
   },
   "dependencies": {
-    "@types/chart.js": "^2.9.20",
-    "chart.js": "^2.9.3",
+    "@types/react": "^16.9.34",
+    "@types/react-dom": "^16.9.7",
+    "bootstrap": "^4.4.1",
     "electron": "8.2.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
     "typescript": "^3.8.3"
   }
 }

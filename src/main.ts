@@ -1,23 +1,37 @@
-import { app, Menu, Tray } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import * as path from 'path'
 
-let tray = null
+function createWindow() {
+    // create the browser window
+    const mainWindow = new BrowserWindow({
+        width: 1280,
+        height: 720,
+        webPreferences: {
+            nodeIntegration: true,
+        }
+    })
 
-app.on('ready', function () {
-    tray = new Tray(path.join(__dirname, '../electron.png'))
+    // and load the index.html of the app
+    mainWindow.loadFile(path.join(__dirname, '../index.html'))
 
-    const contextMenu = Menu.buildFromTemplate([
-        { label: 'Item1', type: <const>'radio' },
-        { label: 'Item2', type: <const>'radio', checked: true },
-        { label: 'Item3', type: <const>'radio' },
-        {
-            label: 'Exit', type: <const>'normal', click: function () {
-                // console.log(arguments)
-                app.exit()
-            }
-        },
-    ])
+    // open DevTools
+    mainWindow.webContents.openDevTools()
+}
 
-    tray.setToolTip('Electron tray icon')
-    tray.setContextMenu(contextMenu)
+// This method will be called when Electron has finished initialization and is ready to create browser windows. Some APIs can only be used after this event occurs.
+app.whenReady().then(createWindow)
+
+// quit when all windows are closed
+app.on('window-all-closed', function () {
+    // On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q
+    if (process.platform !== 'darwin') {
+        app.quit()
+    }
+})
+
+app.on('activate', function () {
+    // On macOS it's common to re-create a window in the app when the dock icon is clicked and there are no other windows open
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+    }
 })
