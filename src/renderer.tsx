@@ -24,6 +24,8 @@ const ignoreExtensions = [
     '.jpeg',
     '.json',
     '.dll',
+    '.lock',
+    '.gitignore',
 ]
 
 interface CodeFileType {
@@ -52,7 +54,7 @@ const codeFileTypes: CodeFileType[] = [
         name: 'JavaScript',
         extensions: [
             '.js',
-            '.tsx'
+            '.jsx'
         ],
     },
     {
@@ -73,7 +75,13 @@ const codeFileTypes: CodeFileType[] = [
         extensions: [
             '.cs',
         ],
-    }
+    },
+    {
+        name: 'CSS',
+        extensions: [
+            '.css',
+        ],
+    },
 ]
 
 function countLines(inPath: string) {
@@ -106,13 +114,17 @@ function countLines(inPath: string) {
     }
 }
 
-interface FileNodeProps {
+type FileContent = Record<string, { lines: number, nonEmptyLines: number }>
+
+interface FileNodeStats {
     name: string
-    children?: FileNodeProps[]
+    children?: FileNodeStats[]
     size: number
+    root?: FileNodeStats
+    content: FileContent
 }
 
-function buildFileTree(inPath: string): FileNodeProps {
+function buildFileTree(inPath: string): FileNodeStats {
     let fileName = path.basename(inPath)
     console.log(inPath)
 
@@ -135,6 +147,7 @@ function buildFileTree(inPath: string): FileNodeProps {
 
         let children = []
         let size = 0
+        let content: FileContent = {}
 
         for (let i = 0; i < childFiles.length; i++) {
             let node = buildFileTree(path.join(inPath, childFiles[i]))
@@ -142,6 +155,16 @@ function buildFileTree(inPath: string): FileNodeProps {
             if (node) {
                 children.push(node)
                 size += node.size
+
+                let childContent = node.content
+                for (let codeType in childContent) {
+                    if (content[codeType]) {
+                        content[codeType].lines += childContent[codeType].lines
+                        content[codeType].nonEmptyLines += childContent[codeType].nonEmptyLines
+                    } else {
+                        content[codeType] = childContent[codeType]
+                    }
+                }
             }
         }
 
@@ -149,6 +172,7 @@ function buildFileTree(inPath: string): FileNodeProps {
             name: fileName,
             children: children,
             size: size,
+            content: content,
         }
     } else if (stats.isFile()) {
         let extension = path.extname(inPath).toLowerCase()
@@ -162,9 +186,31 @@ function buildFileTree(inPath: string): FileNodeProps {
         let lineCounts = countLines(inPath)
         console.log(lineCounts)
 
+        let codeTypeName: string
+
+        for (let i = 0; i < codeFileTypes.length; i++) {
+            let codeType = codeFileTypes[i]
+
+            if (codeType.extensions.indexOf(extension) > -1) {
+                codeTypeName = codeType.name
+                break
+            }
+        }
+
+        if (!codeTypeName) {
+            codeTypeName = 'Other'
+        }
+
+        let content = {}
+        content[codeTypeName] = {
+            lines: lineCounts.totalLines,
+            nonEmptyLines: lineCounts.numNonEmptyLines,
+        }
+
         return {
             name: fileName,
             size: stats.size,
+            content: content,
         }
     } else {
         return null
@@ -251,12 +297,12 @@ function Icon({ icon }: OcticonProps) {
     </span>
 }
 
-class TreeNode extends React.Component<FileNodeProps, {}>{
+class TreeNode extends React.Component<FileNodeStats, {}>{
     state = {
         expanded: false,
     }
 
-    constructor(props: FileNodeProps) {
+    constructor(props: FileNodeStats) {
         super(props)
         this.toggleExpand = this.toggleExpand.bind(this)
     }
@@ -277,6 +323,8 @@ class TreeNode extends React.Component<FileNodeProps, {}>{
         this.setState({
             expanded: !this.state.expanded,
         })
+
+        console.log({ ...this.props.content })
     }
 
     render() {
@@ -303,7 +351,7 @@ class TreeNode extends React.Component<FileNodeProps, {}>{
 }
 
 class App extends React.Component {
-    state: { fileNode?: FileNodeProps } = {
+    state: { fileNode?: FileNodeStats } = {
         fileNode: null,
     }
 
