@@ -4,7 +4,7 @@ import * as fs from 'fs'
 
 import * as React from 'react'
 import { render } from 'react-dom'
-import Octicon, { TriangleRight, TriangleDown, FileDirectory, File } from '@primer/octicons-react'
+import Octicon, { TriangleRight, TriangleDown, FileDirectory, File, OcticonProps } from '@primer/octicons-react'
 
 const MAX_FILE_SIZE = 1024 * 1024 * 10 // MB
 
@@ -232,6 +232,19 @@ class FileChooser extends React.Component<FileChooserProps, {}> {
     }
 }
 
+/**
+ * Octicon wrapper for padding.
+ */
+function Icon({ icon }: OcticonProps) {
+    return <span
+        style={{
+            paddingRight: '5px',
+            paddingLeft: '5px',
+        }}>
+        <Octicon icon={icon} />
+    </span>
+}
+
 class TreeNode extends React.Component<FileNodeProps, {}>{
     state = {
         expanded: false,
@@ -265,26 +278,18 @@ class TreeNode extends React.Component<FileNodeProps, {}>{
 
         return <div>
             <div
-                style={{
-                    display: 'block',
-                    position: 'relative',
-                    cursor: 'pointer',
-                }}
                 onClick={this.toggleExpand}
+                className='node-row-info'
             >
                 {!!(children) ?
                     (this.state.expanded ?
-                        <Octicon icon={TriangleDown} />
-                        : <Octicon icon={TriangleRight} />
+                        <Icon icon={TriangleDown} />
+                        : <Icon icon={TriangleRight} />
                     )
                     : null
                 }
-                {!!(children) ? <Octicon icon={FileDirectory} /> : <Octicon icon={File} />}
-                <div style={{
-                    display: 'inline-block',
-                }}>
-                    <p>{name}</p>
-                </div>
+                {!!(children) ? <Icon icon={FileDirectory} /> : <Icon icon={File} />}
+                <span>{name}</span>
             </div>
             {this.state.expanded ? this.renderChildren() : null}
         </div>

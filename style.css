@@ -96,3 +96,16 @@ body {
         opacity: 0;
     }
 }
+
+.node-row-info {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.node-row-info>* {
+    padding: 8px 4px;
+    line-height: 20px;
+    font-size: 14px;
+}
