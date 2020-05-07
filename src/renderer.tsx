@@ -109,6 +109,7 @@ function countLines(inPath: string) {
 interface FileNodeProps {
     name: string
     children?: FileNodeProps[]
+    size: number
 }
 
 function buildFileTree(inPath: string): FileNodeProps {
@@ -124,6 +125,7 @@ function buildFileTree(inPath: string): FileNodeProps {
     let stats = fs.lstatSync(inPath)
 
     if (stats.size > MAX_FILE_SIZE) {
+        console.log(`Skipping ${inPath} because file is too large ${stats.size} bytes!`)
         return null
     }
 
@@ -132,18 +134,21 @@ function buildFileTree(inPath: string): FileNodeProps {
         console.log(childFiles)
 
         let children = []
+        let size = 0
 
         for (let i = 0; i < childFiles.length; i++) {
             let node = buildFileTree(path.join(inPath, childFiles[i]))
 
             if (node) {
                 children.push(node)
+                size += node.size
             }
         }
 
         return {
             name: fileName,
             children: children,
+            size: size,
         }
     } else if (stats.isFile()) {
         let extension = path.extname(inPath).toLowerCase()
@@ -159,6 +164,7 @@ function buildFileTree(inPath: string): FileNodeProps {
 
         return {
             name: fileName,
+            size: stats.size,
         }
     } else {
         return null
@@ -274,7 +280,7 @@ class TreeNode extends React.Component<FileNodeProps, {}>{
     }
 
     render() {
-        const { name, children } = this.props
+        const { name, children, size } = this.props
 
         return <div>
             <div
@@ -289,7 +295,7 @@ class TreeNode extends React.Component<FileNodeProps, {}>{
                     : null
                 }
                 {!!(children) ? <Icon icon={FileDirectory} /> : <Icon icon={File} />}
-                <span>{name}</span>
+                <span>{name} - {size} bytes</span>
             </div>
             {this.state.expanded ? this.renderChildren() : null}
         </div>
