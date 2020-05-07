@@ -8,6 +8,7 @@
     "start": "npm run build && electron ./dist/main.js"
   },
   "dependencies": {
+    "@primer/octicons-react": "^9.6.0",
     "@types/react": "^16.9.34",
     "@types/react-dom": "^16.9.7",
     "bootstrap": "^4.4.1",

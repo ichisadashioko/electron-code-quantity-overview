@@ -4,6 +4,7 @@ import * as fs from 'fs'
 
 import * as React from 'react'
 import { render } from 'react-dom'
+import Octicon, { TriangleRight, TriangleDown, FileDirectory, File } from '@primer/octicons-react'
 
 const MAX_FILE_SIZE = 1024 * 1024 * 10 // MB
 
@@ -106,8 +107,8 @@ function countLines(inPath: string) {
 }
 
 interface FileNodeProps {
-    fileName: string
-    childNodes?: FileNodeProps[]
+    name: string
+    children?: FileNodeProps[]
 }
 
 function buildFileTree(inPath: string): FileNodeProps {
@@ -130,19 +131,19 @@ function buildFileTree(inPath: string): FileNodeProps {
         let childFiles = fs.readdirSync(inPath)
         console.log(childFiles)
 
-        let childNodes = []
+        let children = []
 
         for (let i = 0; i < childFiles.length; i++) {
-            let childNode = buildFileTree(path.join(inPath, childFiles[i]))
+            let node = buildFileTree(path.join(inPath, childFiles[i]))
 
-            if (childNode) {
-                childNodes.push(childNode)
+            if (node) {
+                children.push(node)
             }
         }
 
         return {
-            fileName: fileName,
-            childNodes: childNodes,
+            name: fileName,
+            children: children,
         }
     } else if (stats.isFile()) {
         let extension = path.extname(inPath).toLowerCase()
@@ -157,11 +158,20 @@ function buildFileTree(inPath: string): FileNodeProps {
         console.log(lineCounts)
 
         return {
-            fileName: fileName,
+            name: fileName,
         }
     } else {
         return null
     }
+}
+
+const ul: React.CSSProperties = {
+    listStyle: 'none',
+    paddingLeft: '20px',
+}
+
+const style = {
+    ul: ul,
 }
 
 function Spinner() {
@@ -222,7 +232,7 @@ class FileChooser extends React.Component<FileChooserProps, {}> {
     }
 }
 
-class FileNodeComponent extends React.Component<FileNodeProps, {}>{
+class TreeNode extends React.Component<FileNodeProps, {}>{
     state = {
         expanded: false,
     }
@@ -232,13 +242,13 @@ class FileNodeComponent extends React.Component<FileNodeProps, {}>{
         this.toggleExpand = this.toggleExpand.bind(this)
     }
 
-    renderChildNodes() {
-        if (this.props.childNodes) {
-            const listItems = this.props.childNodes.map(function (fileNode) {
-                return <li key={fileNode.fileName}>{React.createElement(FileNodeComponent, fileNode)}</li>
+    renderChildren() {
+        if (this.props.children) {
+            const listItems = this.props.children.map(function (node) {
+                return <li key={node.name}>{React.createElement(TreeNode, node)}</li>
             })
 
-            return <ul>{listItems}</ul>
+            return <ul style={style.ul}>{listItems}</ul>
         } else {
             return (null)
         }
@@ -251,9 +261,32 @@ class FileNodeComponent extends React.Component<FileNodeProps, {}>{
     }
 
     render() {
+        const { name, children } = this.props
+
         return <div>
-            <p onClick={this.toggleExpand}>{this.props.fileName}</p>
-            {this.state.expanded ? this.renderChildNodes() : null}
+            <div
+                style={{
+                    display: 'block',
+                    position: 'relative',
+                    cursor: 'pointer',
+                }}
+                onClick={this.toggleExpand}
+            >
+                {!!(children) ?
+                    (this.state.expanded ?
+                        <Octicon icon={TriangleDown} />
+                        : <Octicon icon={TriangleRight} />
+                    )
+                    : null
+                }
+                {!!(children) ? <Octicon icon={FileDirectory} /> : <Octicon icon={File} />}
+                <div style={{
+                    display: 'inline-block',
+                }}>
+                    <p>{name}</p>
+                </div>
+            </div>
+            {this.state.expanded ? this.renderChildren() : null}
         </div>
     }
 }
@@ -262,6 +295,7 @@ class App extends React.Component {
     state: { fileNode?: FileNodeProps } = {
         fileNode: null,
     }
+
     constructor(props: {}) {
         super(props)
         this.onFileSelected = this.onFileSelected.bind(this)
@@ -276,7 +310,7 @@ class App extends React.Component {
     render() {
         return <div>
             <FileChooser onFileSelected={this.onFileSelected} />
-            {this.state.fileNode != null ? React.createElement(FileNodeComponent, this.state.fileNode) : null}
+            {this.state.fileNode != null ? React.createElement(TreeNode, this.state.fileNode) : null}
         </div>
     }
 }
