@@ -353,12 +353,13 @@ type RootState = ReturnType<typeof rootReducer>
 const store = createStore(rootReducer)
 
 interface CodeInfoSpanProps {
+    title?: string
     codeType: string
     ratio: string
 }
 
-function CodeInfoSpan({ codeType, ratio }: CodeInfoSpanProps) {
-    return <span>{codeType} - {ratio}%</span>
+function CodeInfoSpan({ codeType, ratio, title }: CodeInfoSpanProps) {
+    return <span title={title}>{codeType} - {ratio}%</span>
 }
 
 interface TreeNodeProps extends FileNodeStats {
@@ -389,6 +390,7 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
         if (root) {
             for (let codeType in content) {
                 let portion: string
+                let title: string
 
                 console.log(`${metric} - ${typeof metric}`)
                 if (typeof metric === 'string') {
@@ -403,23 +405,29 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
                         let rootLines = root.content[codeType].lines
                         console.log(`lines - ${lines} - ${rootLines}`)
                         portion = (lines * 100 / rootLines).toFixed(1)
+                        title = `${lines} line(s) out of ${rootLines} line(s)`
                         break
                     case Metric.NonEmptyLinesOfCode:
                         let nonEmptyLines = content[codeType].nonEmptyLines
                         let rootNonEmptyLines = root.content[codeType].nonEmptyLines
                         console.log(`non empty lines - ${nonEmptyLines} / ${rootNonEmptyLines}`)
                         portion = (nonEmptyLines * 100 / rootNonEmptyLines).toFixed(1)
+                        title = `${nonEmptyLines} line(s) out of ${rootNonEmptyLines} line(s)`
                         break
                     default:
                         let size = content[codeType].size
                         let rootSize = root.content[codeType].size
                         console.log(`size - ${size} - ${rootSize}`)
                         portion = (size * 100 / rootSize).toFixed(1)
+                        title = `${size} byte(s) out of ${rootSize} byte(s)`
                         break
                 }
 
                 console.log(`${codeType} - ${portion}`)
-                contentInfos.push(<CodeInfoSpan codeType={codeType} ratio={portion} />)
+                contentInfos.push(<CodeInfoSpan
+                    codeType={codeType} ratio={portion}
+                    title={title}
+                />)
             }
         }
 
