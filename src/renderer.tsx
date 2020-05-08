@@ -162,7 +162,7 @@ function buildFileTree(inPath: string): FileNodeStats {
                         content[codeType].lines += childContent[codeType].lines
                         content[codeType].nonEmptyLines += childContent[codeType].nonEmptyLines
                     } else {
-                        content[codeType] = childContent[codeType]
+                        content[codeType] = { ...childContent[codeType] }
                     }
                 }
             }
@@ -328,7 +328,13 @@ class TreeNode extends React.Component<FileNodeStats, {}>{
     }
 
     render() {
-        const { name, children, size } = this.props
+        const { name, children, size, content } = this.props
+
+        let contentInfos = []
+
+        for (let codeType in content) {
+            contentInfos.push(<span key={codeType}>{codeType} - {content[codeType].lines} lines</span>)
+        }
 
         return <div>
             <div
@@ -343,7 +349,9 @@ class TreeNode extends React.Component<FileNodeStats, {}>{
                     : null
                 }
                 {!!(children) ? <Icon icon={FileDirectory} /> : <Icon icon={File} />}
-                <span>{name} - {size} bytes</span>
+                <span>{name}</span>
+                <span>{size} bytes</span>
+                {contentInfos}
             </div>
             {this.state.expanded ? this.renderChildren() : null}
         </div>
