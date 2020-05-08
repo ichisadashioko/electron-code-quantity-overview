@@ -35,6 +35,13 @@ interface CodeFileType {
 
 const codeFileTypes: CodeFileType[] = [
     {
+        name: 'HTML',
+        extensions: [
+            '.htm',
+            '.html',
+        ],
+    },
+    {
         name: 'C/C++',
         extensions: [
             '.h',
@@ -114,7 +121,7 @@ function countLines(inPath: string) {
     }
 }
 
-type FileContent = Record<string, { lines: number, nonEmptyLines: number }>
+type FileContent = Record<string, { lines: number, nonEmptyLines: number, size: number }>
 
 interface FileNodeStats {
     name: string
@@ -161,6 +168,7 @@ function buildFileTree(inPath: string): FileNodeStats {
                     if (content[codeType]) {
                         content[codeType].lines += childContent[codeType].lines
                         content[codeType].nonEmptyLines += childContent[codeType].nonEmptyLines
+                        content[codeType].size += childContent[codeType].size
                     } else {
                         content[codeType] = { ...childContent[codeType] }
                     }
@@ -201,10 +209,11 @@ function buildFileTree(inPath: string): FileNodeStats {
             codeTypeName = 'Other'
         }
 
-        let content = {}
+        let content: FileContent = {}
         content[codeTypeName] = {
             lines: lineCounts.totalLines,
             nonEmptyLines: lineCounts.numNonEmptyLines,
+            size: stats.size,
         }
 
         return {
@@ -214,6 +223,16 @@ function buildFileTree(inPath: string): FileNodeStats {
         }
     } else {
         return null
+    }
+}
+
+function setRoot(node: FileNodeStats, root: FileNodeStats) {
+    node.root = root
+
+    if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+            setRoot(node.children[i], root)
+        }
     }
 }
 
@@ -297,20 +316,45 @@ function Icon({ icon }: OcticonProps) {
     </span>
 }
 
-class TreeNode extends React.Component<FileNodeStats, {}>{
+enum QuantityType {
+    Size,
+    LinesOfCode,
+    NonEmptyLinesOfCode,
+}
+
+// https://stackoverflow.com/a/18112157/8364403
+// for (let e in QuantityType) {
+//     console.log(e)
+// }
+
+interface TreeNodeProps extends FileNodeStats {
+    quantityType: QuantityType
+}
+
+class TreeNode extends React.Component<TreeNodeProps, {}>{
     state = {
         expanded: false,
     }
 
-    constructor(props: FileNodeStats) {
+    constructor(props: TreeNodeProps) {
         super(props)
         this.toggleExpand = this.toggleExpand.bind(this)
     }
 
     renderChildren() {
+        let that = this
+
         if (this.props.children) {
             const listItems = this.props.children.map(function (node) {
-                return <li key={node.name}>{React.createElement(TreeNode, node)}</li>
+                return <li key={node.name}>
+                    {React.createElement(
+                        TreeNode,
+                        {
+                            ...node,
+                            quantityType: that.props.quantityType,
+                        }
+                    )}
+                </li>
             })
 
             return <ul style={style.ul}>{listItems}</ul>
@@ -323,17 +367,33 @@ class TreeNode extends React.Component<FileNodeStats, {}>{
         this.setState({
             expanded: !this.state.expanded,
         })
-
-        console.log({ ...this.props.content })
     }
 
     render() {
-        const { name, children, size, content } = this.props
+        const { name, children, size, content, root } = this.props
 
+        console.log(`Rendering with ${QuantityType[this.props.quantityType]}`)
         let contentInfos = []
+        if (root) {
+            for (let codeType in content) {
+                let portion: string
 
-        for (let codeType in content) {
-            contentInfos.push(<span key={codeType}>{codeType} - {content[codeType].lines} lines</span>)
+                switch (this.props.quantityType) {
+                    case QuantityType.LinesOfCode:
+                        portion = (content[codeType].lines * 100 / root.content[codeType].lines).toFixed(1)
+                        break
+                    case QuantityType.NonEmptyLinesOfCode:
+                        portion = (content[codeType].nonEmptyLines * 100 / root.content[codeType].nonEmptyLines).toFixed(1)
+                        break
+                    default:
+                        portion = (content[codeType].size * 100 / root.content[codeType].size).toFixed(1)
+                        break
+                }
+
+                contentInfos.push(<span key={codeType}>
+                    {codeType} - {portion}%
+                </span>)
+            }
         }
 
         return <div>
@@ -350,7 +410,6 @@ class TreeNode extends React.Component<FileNodeStats, {}>{
                 }
                 {!!(children) ? <Icon icon={FileDirectory} /> : <Icon icon={File} />}
                 <span>{name}</span>
-                <span>{size} bytes</span>
                 {contentInfos}
             </div>
             {this.state.expanded ? this.renderChildren() : null}
@@ -358,26 +417,79 @@ class TreeNode extends React.Component<FileNodeStats, {}>{
     }
 }
 
-class App extends React.Component {
-    state: { fileNode?: FileNodeStats } = {
-        fileNode: null,
+interface AppState {
+    node?: FileNodeStats
+    quantityType: QuantityType
+}
+
+class App extends React.Component<{}, AppState> {
+    state = {
+        node: null,
+        quantityType: QuantityType.LinesOfCode,
     }
 
     constructor(props: {}) {
         super(props)
         this.onFileSelected = this.onFileSelected.bind(this)
+        this.onDropdownChanged = this.onDropdownChanged.bind(this)
     }
 
     onFileSelected(filePath: string) {
-        this.setState({
-            fileNode: buildFileTree(filePath),
+        console.log(filePath)
+        let node = buildFileTree(filePath)
+        setRoot(node, node)
+        this.setState({ node: node })
+    }
+
+    renderNode() {
+        if (this.state.node != null) {
+            return React.createElement(
+                TreeNode,
+                {
+                    ...this.state.node,
+                    quantityType: this.state.quantityType,
+                }
+            )
+        } else {
+            return (null)
+        }
+    }
+
+    onDropdownChanged(ev: React.ChangeEvent<HTMLSelectElement>) {
+        let value = ev.target.value as unknown as QuantityType
+        console.log(value)
+
+        // this.setState({
+        //     ...this.state,
+        //     quantityType: value,
+        // })
+
+        // let that = this
+        this.setState(function (prevState) {
+            return {
+                ...prevState,
+                quantityType: value,
+            }
         })
+    }
+
+    renderDropdown() {
+        let options = []
+
+        options.push(<option key={QuantityType.NonEmptyLinesOfCode} value={QuantityType.NonEmptyLinesOfCode}>{QuantityType[QuantityType.NonEmptyLinesOfCode]}</option>)
+        options.push(<option key={QuantityType.Size} value={QuantityType.Size}>{QuantityType[QuantityType.Size]}</option>)
+        options.push(<option key={QuantityType.LinesOfCode} value={QuantityType.LinesOfCode}>{QuantityType[QuantityType.LinesOfCode]}</option>)
+
+        return <select onChange={this.onDropdownChanged} value={this.state.quantityType}>
+            {options}
+        </select>
     }
 
     render() {
         return <div>
             <FileChooser onFileSelected={this.onFileSelected} />
-            {this.state.fileNode != null ? React.createElement(TreeNode, this.state.fileNode) : null}
+            {this.renderDropdown()}
+            {this.renderNode()}
         </div>
     }
 }
