@@ -5,6 +5,38 @@ import * as fs from 'fs'
 import * as React from 'react'
 import { render } from 'react-dom'
 import Octicon, { TriangleRight, TriangleDown, FileDirectory, File, OcticonProps } from '@primer/octicons-react'
+import { combineReducers, createStore } from 'redux'
+import { Provider, connect } from 'react-redux'
+
+function Spinner() {
+    return <div className='lds-spinner'>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+}
+
+/**
+ * Octicon wrapper for adding padding.
+ */
+export default function Icon({ icon }: OcticonProps) {
+    return <span
+        style={{
+            paddingRight: '5px',
+            paddingLeft: '5px',
+        }}>
+        <Octicon icon={icon} />
+    </span>
+}
 
 const MAX_FILE_SIZE = 1024 * 1024 * 10 // MB
 
@@ -245,90 +277,92 @@ const style = {
     ul: ul,
 }
 
-function Spinner() {
-    return <div className='lds-spinner'>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-    </div>
-}
-
-interface FileChooserProps {
-    onFileSelected?: (selectedFilePath: string) => void
-}
-
-class FileChooser extends React.Component<FileChooserProps, {}> {
-    constructor(props: FileChooserProps) {
-        super(props)
-        this.handleOnClick = this.handleOnClick.bind(this)
-    }
-
-    handleOnClick() {
-        console.log(arguments)
-        const that = this
-
-        remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
-            properties: [
-                'openDirectory',
-            ],
-        }).then(function (ret) {
-            if (ret.filePaths.length !== 0) {
-                let selectedFile = ret.filePaths[0]
-                fs.exists(selectedFile, function (exists) {
-                    if (exists) {
-                        if (that.props.onFileSelected) {
-                            that.props.onFileSelected(selectedFile)
-                        }
-                    }
-                })
-            }
-        })
-    }
-
-    render() {
-        return <button
-            onClick={this.handleOnClick}
-            className='btn btn-primary'>
-            Choose Directory
-        </button>
-    }
-}
-
-/**
- * Octicon wrapper for padding.
- */
-function Icon({ icon }: OcticonProps) {
-    return <span
-        style={{
-            paddingRight: '5px',
-            paddingLeft: '5px',
-        }}>
-        <Octicon icon={icon} />
-    </span>
-}
-
-enum QuantityType {
+enum Metric {
     Size,
     LinesOfCode,
     NonEmptyLinesOfCode,
 }
 
-// https://stackoverflow.com/a/18112157/8364403
-// for (let e in QuantityType) {
-//     console.log(e)
-// }
+
+// I only use tsc to compile TypeScript so there is no bundler.
+// Electron doesn't resolve relative module correctly so I have to put
+// all the code into a single file.
+interface AppState {
+    node: FileNodeStats
+    metric: Metric
+}
+
+const UPDATE_METRIC = 'UPDATE_METRIC'
+
+interface UpdateMetricAction {
+    type: typeof UPDATE_METRIC
+    payload: Metric
+}
+
+const SET_NODE = 'SET_NODE'
+
+interface SetNodeAction {
+    type: typeof SET_NODE
+    payload: FileNodeStats
+}
+
+type AppActionTypes = UpdateMetricAction | SetNodeAction
+
+function updateMetric(metric: Metric): AppActionTypes {
+    return {
+        type: UPDATE_METRIC,
+        payload: metric,
+    }
+}
+
+function setNode(node: FileNodeStats): AppActionTypes {
+    return {
+        type: SET_NODE,
+        payload: node,
+    }
+}
+
+const appInitialState: AppState = {
+    node: null,
+    metric: Metric.LinesOfCode,
+}
+
+function appReducer(state = appInitialState, action: AppActionTypes): AppState {
+    switch (action.type) {
+        case UPDATE_METRIC:
+            return {
+                ...state,
+                metric: action.payload,
+            }
+        case SET_NODE:
+            return {
+                ...state,
+                node: action.payload,
+            }
+        default:
+            return state
+    }
+}
+
+const rootReducer = combineReducers({
+    app: appReducer,
+})
+
+type RootState = ReturnType<typeof rootReducer>
+
+const store = createStore(rootReducer)
+
+interface CodeInfoSpanProps {
+    codeType: string
+    ratio: string
+}
+
+function CodeInfoSpan({ codeType, ratio }: CodeInfoSpanProps) {
+    return <span>{codeType} - {ratio}%</span>
+}
 
 interface TreeNodeProps extends FileNodeStats {
-    quantityType: QuantityType
+    metric: Metric
 }
 
 class TreeNode extends React.Component<TreeNodeProps, {}>{
@@ -351,7 +385,7 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
                         TreeNode,
                         {
                             ...node,
-                            quantityType: that.props.quantityType,
+                            metric: that.props.metric,
                         }
                     )}
                 </li>
@@ -370,29 +404,37 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
     }
 
     render() {
-        const { name, children, size, content, root } = this.props
+        const { name, children, content, root, metric: quantityType } = this.props
 
-        console.log(`Rendering with ${QuantityType[this.props.quantityType]}`)
+        console.log(`Rendering ${name} with ${Metric[quantityType]}`)
         let contentInfos = []
         if (root) {
             for (let codeType in content) {
                 let portion: string
 
-                switch (this.props.quantityType) {
-                    case QuantityType.LinesOfCode:
-                        portion = (content[codeType].lines * 100 / root.content[codeType].lines).toFixed(1)
+                switch (quantityType) {
+                    case Metric.LinesOfCode:
+                        let lines = content[codeType].lines
+                        let rootLines = root.content[codeType].lines
+                        console.log(`lines - ${lines} - ${rootLines}`)
+                        portion = (lines * 100 / rootLines).toFixed(1)
                         break
-                    case QuantityType.NonEmptyLinesOfCode:
-                        portion = (content[codeType].nonEmptyLines * 100 / root.content[codeType].nonEmptyLines).toFixed(1)
+                    case Metric.NonEmptyLinesOfCode:
+                        let nonEmptyLines = content[codeType].nonEmptyLines
+                        let rootNonEmptyLines = root.content[codeType].nonEmptyLines
+                        console.log(`non empty lines - ${nonEmptyLines} / ${rootNonEmptyLines}`)
+                        portion = (nonEmptyLines * 100 / rootNonEmptyLines).toFixed(1)
                         break
                     default:
-                        portion = (content[codeType].size * 100 / root.content[codeType].size).toFixed(1)
+                        let size = content[codeType].size
+                        let rootSize = root.content[codeType].size
+                        console.log(`size - ${size} - ${rootSize}`)
+                        portion = (size * 100 / rootSize).toFixed(1)
                         break
                 }
 
-                contentInfos.push(<span key={codeType}>
-                    {codeType} - {portion}%
-                </span>)
+                console.log(`${codeType} - ${portion}`)
+                contentInfos.push(<CodeInfoSpan codeType={codeType} ratio={portion} />)
             }
         }
 
@@ -416,82 +458,95 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
         </div>
     }
 }
-
-interface AppState {
-    node?: FileNodeStats
-    quantityType: QuantityType
-}
-
-class App extends React.Component<{}, AppState> {
-    state = {
-        node: null,
-        quantityType: QuantityType.LinesOfCode,
-    }
-
+class FileChooser extends React.Component {
     constructor(props: {}) {
         super(props)
-        this.onFileSelected = this.onFileSelected.bind(this)
-        this.onDropdownChanged = this.onDropdownChanged.bind(this)
+        this.handleOnClick = this.handleOnClick.bind(this)
     }
 
-    onFileSelected(filePath: string) {
-        console.log(filePath)
-        let node = buildFileTree(filePath)
-        setRoot(node, node)
-        this.setState({ node: node })
-    }
+    handleOnClick() {
+        console.log(arguments)
+        const that = this
 
-    renderNode() {
-        if (this.state.node != null) {
-            return React.createElement(
-                TreeNode,
-                {
-                    ...this.state.node,
-                    quantityType: this.state.quantityType,
-                }
-            )
-        } else {
-            return (null)
-        }
-    }
+        remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
+            properties: [
+                'openDirectory',
+            ],
+        }).then(function (ret) {
+            if (ret.filePaths.length !== 0) {
+                let selectedFile = ret.filePaths[0]
+                fs.exists(selectedFile, function (exists) {
+                    if (exists) {
+                        console.log(selectedFile)
+                        let node = buildFileTree(selectedFile)
+                        setRoot(node, node)
 
-    onDropdownChanged(ev: React.ChangeEvent<HTMLSelectElement>) {
-        let value = ev.target.value as unknown as QuantityType
-        console.log(value)
-
-        // this.setState({
-        //     ...this.state,
-        //     quantityType: value,
-        // })
-
-        // let that = this
-        this.setState(function (prevState) {
-            return {
-                ...prevState,
-                quantityType: value,
+                        store.dispatch({
+                            type: SET_NODE,
+                            payload: node,
+                        })
+                    }
+                })
             }
         })
     }
 
-    renderDropdown() {
-        let options = []
-
-        options.push(<option key={QuantityType.NonEmptyLinesOfCode} value={QuantityType.NonEmptyLinesOfCode}>{QuantityType[QuantityType.NonEmptyLinesOfCode]}</option>)
-        options.push(<option key={QuantityType.Size} value={QuantityType.Size}>{QuantityType[QuantityType.Size]}</option>)
-        options.push(<option key={QuantityType.LinesOfCode} value={QuantityType.LinesOfCode}>{QuantityType[QuantityType.LinesOfCode]}</option>)
-
-        return <select onChange={this.onDropdownChanged} value={this.state.quantityType}>
-            {options}
-        </select>
-    }
-
     render() {
-        return <div>
-            <FileChooser onFileSelected={this.onFileSelected} />
-            {this.renderDropdown()}
-            {this.renderNode()}
-        </div>
+        return <button
+            onClick={this.handleOnClick}
+            className='btn btn-primary'>
+            Choose Directory
+        </button>
     }
 }
 
-render(<App />, document.getElementById('main'))
+interface AppProps {
+    node: FileNodeStats
+    metric: Metric
+}
+
+interface MetricSelectorProps {
+    metric: Metric
+}
+
+function MetricSelector(props: MetricSelectorProps) {
+    return <select value={props.metric} onChange={function (ev) {
+        let value = ev.target.value
+        // console.log(value)
+        // console.log(typeof value)
+
+        // @ts-ignore
+        store.dispatch({
+            type: UPDATE_METRIC,
+            payload: value,
+        })
+    }}>
+        <option value={Metric.LinesOfCode}>{Metric[Metric.LinesOfCode]}</option>
+        <option value={Metric.NonEmptyLinesOfCode}>{Metric[Metric.NonEmptyLinesOfCode]}</option>
+        <option value={Metric.Size}>{Metric[Metric.Size]}</option>
+    </select>
+}
+
+function App(props: AppProps) {
+    return <div>
+        <FileChooser />
+        <MetricSelector metric={props.metric} />
+        {props.node != null ? React.createElement(TreeNode, { ...props.node, metric: props.metric }) : null}
+    </div>
+}
+
+function mapAppStateToProps(state: RootState): AppState {
+    return {
+        node: state.app.node,
+        metric: state.app.metric,
+    }
+}
+
+let ConnectedApp = connect(mapAppStateToProps)(App)
+
+render(
+    <Provider store={store}>
+        <ConnectedApp />
+    </Provider>,
+    document.getElementById('main'),
+)
