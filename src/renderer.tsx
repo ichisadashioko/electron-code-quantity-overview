@@ -375,28 +375,6 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
         this.toggleExpand = this.toggleExpand.bind(this)
     }
 
-    renderChildren() {
-        let that = this
-
-        if (this.props.children) {
-            const listItems = this.props.children.map(function (node) {
-                return <li key={node.name}>
-                    {React.createElement(
-                        TreeNode,
-                        {
-                            ...node,
-                            metric: that.props.metric,
-                        }
-                    )}
-                </li>
-            })
-
-            return <ul style={style.ul}>{listItems}</ul>
-        } else {
-            return (null)
-        }
-    }
-
     toggleExpand() {
         this.setState({
             expanded: !this.state.expanded,
@@ -404,15 +382,22 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
     }
 
     render() {
-        const { name, children, content, root, metric: quantityType } = this.props
+        const { name, children, content, root, metric } = this.props
 
-        console.log(`Rendering ${name} with ${Metric[quantityType]}`)
+        console.log(`Rendering ${name} with ${Metric[metric]}`)
         let contentInfos = []
         if (root) {
             for (let codeType in content) {
                 let portion: string
 
-                switch (quantityType) {
+                console.log(`${metric} - ${typeof metric}`)
+                if (typeof metric === 'string') {
+                    // https://stackoverflow.com/a/14668510/8364403
+                    // @ts-ignore
+                    metric = +metric
+                }
+
+                switch (metric) {
                     case Metric.LinesOfCode:
                         let lines = content[codeType].lines
                         let rootLines = root.content[codeType].lines
@@ -454,7 +439,20 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
                 <span>{name}</span>
                 {contentInfos}
             </div>
-            {this.state.expanded ? this.renderChildren() : null}
+            {this.state.expanded ? this.props.children ? <ul style={style.ul}>
+                {this.props.children.map((node) => {
+                    return <li key={node.name}>
+                        <TreeNode
+                            name={node.name}
+                            metric={this.props.metric}
+                            size={node.size}
+                            content={node.content}
+                            children={node.children}
+                            root={node.root}
+                        />
+                    </li>
+                })}
+            </ul> : null : null}
         </div>
     }
 }
@@ -531,7 +529,14 @@ function App(props: AppProps) {
     return <div>
         <FileChooser />
         <MetricSelector metric={props.metric} />
-        {props.node != null ? React.createElement(TreeNode, { ...props.node, metric: props.metric }) : null}
+        {props.node != null ? <TreeNode
+            metric={props.metric}
+            name={props.node.name}
+            size={props.node.size}
+            content={props.node.content}
+            children={props.node.children}
+            root={props.node.root}
+        /> : null}
     </div>
 }
 
