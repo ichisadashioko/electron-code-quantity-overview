@@ -45,16 +45,18 @@ function Icon(props: IconProps) {
 
 const MAX_FILE_SIZE = 1024 * 1024 * 10 // MB
 
-const ignoreFiles = [
+const ignoredFiles = [
     'bin',
     'obj',
     '.git',
     '.vscode',
     'node_modules',
     'dist',
+    '__pycache__',
+    '.ipynb_checkpoints',
 ]
 
-const ignoreExtensions = [
+const ignoredExtensions = [
     '.ini', // Windows
     '.png',
     '.jpg',
@@ -182,8 +184,8 @@ function buildFileTree(inPath: string): FileNodeStats {
     let fileName = path.basename(inPath)
     console.log(inPath)
 
-    for (let i = 0; i < ignoreFiles.length; i++) {
-        if (fileName.toLowerCase() === ignoreFiles[i]) {
+    for (let i = 0; i < ignoredFiles.length; i++) {
+        if (fileName.toLowerCase() === ignoredFiles[i]) {
             return null
         }
     }
@@ -232,8 +234,8 @@ function buildFileTree(inPath: string): FileNodeStats {
     } else if (stats.isFile()) {
         let extension = path.extname(inPath).toLowerCase()
 
-        for (let i = 0; i < ignoreExtensions.length; i++) {
-            if (extension === ignoreExtensions[i]) {
+        for (let i = 0; i < ignoredExtensions.length; i++) {
+            if (extension === ignoredExtensions[i]) {
                 return null
             }
         }
