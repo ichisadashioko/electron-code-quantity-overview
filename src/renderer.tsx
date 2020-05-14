@@ -7,7 +7,7 @@ import { render } from 'react-dom'
 import Octicon, { FileDirectory, File, OcticonProps } from '@primer/octicons-react'
 import { combineReducers, createStore } from 'redux'
 import { Provider, connect } from 'react-redux'
-import { isText, getEncoding, isTextSync } from 'istextorbinary'
+import { isTextSync } from 'istextorbinary'
 
 function Spinner() {
     return <div className='lds-spinner'>
@@ -63,6 +63,7 @@ const ignoreExtensions = [
     '.dll',
     '.lock',
     '.gitignore',
+    '.log',
 ]
 
 interface CodeFileType {
@@ -124,6 +125,12 @@ const codeFileTypes: CodeFileType[] = [
         name: 'CSS',
         extensions: [
             '.css',
+        ],
+    },
+    {
+        name: 'Markdown',
+        extensions: [
+            '.md',
         ],
     },
 ]
@@ -373,7 +380,9 @@ interface CodeInfoSpanProps {
 }
 
 function CodeInfoSpan({ codeType, ratio, title }: CodeInfoSpanProps) {
-    return <span title={title}>{codeType} - {ratio}%</span>
+    return <span className='code-info' title={title}>
+        {codeType} - {ratio}%
+    </span>
 }
 
 interface TreeNodeProps extends FileNodeStats {

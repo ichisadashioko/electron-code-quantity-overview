@@ -117,3 +117,12 @@ body {
 .collapse-icon:before {
     content: '';
 }
+
+.code-info {
+    border-radius: 35px;
+}
+
+.code-info:hover {
+    color: rgb(29, 161, 242);
+    background-color: rgba(29, 161, 242, 0.1);
+}
