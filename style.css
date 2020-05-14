@@ -109,3 +109,11 @@ body {
     line-height: 20px;
     font-size: 14px;
 }
+
+.expand-icon:before {
+    content: '';
+}
+
+.collapse-icon:before {
+    content: '';
+}

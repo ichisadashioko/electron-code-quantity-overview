@@ -4,9 +4,10 @@ import * as fs from 'fs'
 
 import * as React from 'react'
 import { render } from 'react-dom'
-import Octicon, { TriangleRight, TriangleDown, FileDirectory, File, OcticonProps } from '@primer/octicons-react'
+import Octicon, { FileDirectory, File, OcticonProps } from '@primer/octicons-react'
 import { combineReducers, createStore } from 'redux'
 import { Provider, connect } from 'react-redux'
+import { isText, getEncoding, isTextSync } from 'istextorbinary'
 
 function Spinner() {
     return <div className='lds-spinner'>
@@ -25,17 +26,21 @@ function Spinner() {
     </div>
 }
 
+interface IconProps extends OcticonProps {
+    iconWrapperClassName?: string
+}
+
 /**
  * Octicon wrapper for adding padding.
  */
-export default function Icon({ icon }: OcticonProps) {
+function Icon(props: IconProps) {
     return <span
+        className={props.iconWrapperClassName}
         style={{
             paddingRight: '5px',
             paddingLeft: '5px',
-        }}>
-        <Octicon icon={icon} />
-    </span>
+        }}
+    ><Octicon {...props} /></span>
 }
 
 const MAX_FILE_SIZE = 1024 * 1024 * 10 // MB
@@ -127,7 +132,10 @@ function countLines(inPath: string) {
     try {
         let textContent = fs.readFileSync(inPath, {
             encoding: 'utf-8',
+            flag: 'r',
         })
+
+        console.log(textContent)
 
         let lines = textContent.split('\n')
         let numNonEmptyLines = 0
@@ -221,6 +229,12 @@ function buildFileTree(inPath: string): FileNodeStats {
             if (extension === ignoreExtensions[i]) {
                 return null
             }
+        }
+
+        let isTextFile = isTextSync(inPath)
+
+        if (!isTextFile) {
+            return null
         }
 
         let lineCounts = countLines(inPath)
@@ -385,14 +399,14 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
     render() {
         const { name, children, content, root, metric } = this.props
 
-        console.log(`Rendering ${name} with ${Metric[metric]}`)
+        // console.log(`Rendering ${name} with ${Metric[metric]}`)
         let contentInfos = []
         if (root) {
             for (let codeType in content) {
                 let portion: string
                 let title: string
 
-                console.log(`${metric} - ${typeof metric}`)
+                // console.log(`${metric} - ${typeof metric}`)
                 if (typeof metric === 'string') {
                     // https://stackoverflow.com/a/14668510/8364403
                     // @ts-ignore
@@ -423,7 +437,7 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
                         break
                 }
 
-                console.log(`${codeType} - ${portion}`)
+                // console.log(`${codeType} - ${portion}`)
                 contentInfos.push(<CodeInfoSpan
                     codeType={codeType} ratio={portion}
                     title={title}
@@ -431,18 +445,21 @@ class TreeNode extends React.Component<TreeNodeProps, {}>{
             }
         }
 
+        let className = 'node-row-info'
+
+        if (children) {
+            if (this.state.expanded) {
+                className += ' collapse-icon'
+            } else {
+                className += ' expand-icon'
+            }
+        }
+
         return <div>
             <div
                 onClick={this.toggleExpand}
-                className='node-row-info'
+                className={className}
             >
-                {!!(children) ?
-                    (this.state.expanded ?
-                        <Icon icon={TriangleDown} />
-                        : <Icon icon={TriangleRight} />
-                    )
-                    : null
-                }
                 {!!(children) ? <Icon icon={FileDirectory} /> : <Icon icon={File} />}
                 <span>{name}</span>
                 {contentInfos}
