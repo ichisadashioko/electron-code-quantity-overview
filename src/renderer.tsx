@@ -513,10 +513,7 @@ class FileChooser extends React.Component {
                         let node = buildFileTree(selectedFile)
                         setRoot(node, node)
 
-                        store.dispatch({
-                            type: SET_NODE,
-                            payload: node,
-                        })
+                        store.dispatch(setNode(node))
                     }
                 })
             }
@@ -548,10 +545,7 @@ function MetricSelector(props: MetricSelectorProps) {
         // console.log(typeof value)
 
         // @ts-ignore
-        store.dispatch({
-            type: UPDATE_METRIC,
-            payload: value,
-        })
+        store.dispatch(updateMetric(value))
     }}>
         <option value={Metric.LinesOfCode}>{Metric[Metric.LinesOfCode]}</option>
         <option value={Metric.NonEmptyLinesOfCode}>{Metric[Metric.NonEmptyLinesOfCode]}</option>
