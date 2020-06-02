@@ -54,6 +54,7 @@ const ignoredFiles = [
     'dist',
     '__pycache__',
     '.ipynb_checkpoints',
+    '.gitignore',
 ]
 
 const ignoredExtensions = [
@@ -133,6 +134,12 @@ const codeFileTypes: CodeFileType[] = [
         name: 'Markdown',
         extensions: [
             '.md',
+        ],
+    },
+    {
+        name: 'YAML',
+        extensions: [
+            '.yml',
         ],
     },
 ]
