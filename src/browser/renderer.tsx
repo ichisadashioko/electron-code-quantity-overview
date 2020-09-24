@@ -2,13 +2,6 @@ import { remote } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 
-import * as React from 'react'
-import { render } from 'react-dom'
-import Octicon, { FileDirectory, File, OcticonProps } from '@primer/octicons-react'
-import { combineReducers, createStore } from 'redux'
-import { Provider, connect } from 'react-redux'
-import { isTextSync } from 'istextorbinary'
-
 function Spinner() {
     return <div className='lds-spinner'>
         <div></div>
