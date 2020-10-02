@@ -6,13 +6,13 @@
     "node": "~12"
   },
   "scripts": {
-    "build": "tsc",
     "watch": "tsc -w",
-    "start": "tsc && electron ./dist/main.js"
+    "start": "electron ./src/app/main.js"
   },
   "dependencies": {
     "@types/node": "12.12.39",
-    "electron": "^10.1.2",
+    "electron": "10.1.2",
+    "jsdoc": "^3.6.6",
     "typescript": "^4.0.3"
   }
 }
