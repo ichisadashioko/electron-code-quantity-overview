@@ -1,29 +1,18 @@
 {
   "name": "electron-code-quantity-overview",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "engines": {
     "node": "~12"
   },
   "scripts": {
-    "build": "tsc",
     "watch": "tsc -w",
-    "start": "tsc && electron ./dist/main.js"
+    "start": "electron ./src/app/main.js"
   },
   "dependencies": {
-    "@primer/octicons-react": "^9.6.0",
-    "@types/istextorbinary": "^2.3.0",
     "@types/node": "12.12.39",
-    "@types/react": "^16.9.34",
-    "@types/react-dom": "^16.9.7",
-    "@types/react-redux": "^7.1.8",
-    "bootstrap": "^4.4.1",
-    "electron": "8.2.5",
-    "istextorbinary": "^4.0.0",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-redux": "^7.2.0",
-    "redux": "^4.0.5",
-    "typescript": "^3.9.2"
+    "electron": "10.1.2",
+    "jsdoc": "^3.6.6",
+    "typescript": "^4.0.3"
   }
 }
