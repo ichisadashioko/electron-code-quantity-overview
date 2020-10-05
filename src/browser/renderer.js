@@ -96,7 +96,6 @@ const codeFileTypes = [
 ]
 
 /**
- * 
  * @param {string} inPath 
  */
 function buildFileTree(inPath) {
@@ -159,25 +158,63 @@ function buildFileTree(inPath) {
             }
         }
 
-        let isTextFile = true
         let numLines = 0
         let numNonEmptyLines = 0
+
+        /**
+         * 0: first byte [0xxxxxxx|110xxxxx|1110xxxx|11110xxx]
+         * 1: one continuation byte left
+         * 2: two continuation bytes left
+         * 3: three continuation bytes left
+         */
+        let utf8_parsing_state = 0
+        let isValidUTF8 = true
+
+        let stream = fs.createReadStream(inPath)
+
+        while (true) {
+            let bs = stream.read(1)
+
+            if (bs == null) {
+                break
+            }
+
+            let ch = bs[0]
+
+            if (utf8_parsing_state == 0) {
+                if ((ch >> 7) === 0) {
+                    // do nothing
+                } else if ((ch >> 5) == 0b110) {
+                    utf8_parsing_state = 1
+                } else if ((ch >> 4) == 0b1110) {
+                    utf8_parsing_state = 2
+                } else if ((ch >> 3) == 0b11110) {
+                    utf8_parsing_state = 3
+                } else {
+                    isValidUTF8 = false
+                    break
+                }
+            } else if ((ch >> 6) == 0b10) {
+                utf8_parsing_state--
+            } else {
+                isValidUTF8 = false
+                break
+            }
+        }
+
+        if (!isValidUTF8) {
+            return null
+        }
 
         let textContent = fs.readFileSync(inPath, {
             encoding: 'utf-8',
             flag: 'r',
         })
 
-        // console.log(textContent)
-
         let prevChar = null
-
         for (let cIdx = 0, l = textContent.length; cIdx < l; cIdx++) {
             let curChar = textContent[cIdx]
-            if (curChar === '�') {
-                isTextFile = false
-                break
-            } else if (curChar === '\n') {
+            if (curChar === '\n') {
                 numLines++
 
                 if ((prevChar !== null) && (prevChar !== '\n')) {
@@ -190,9 +227,6 @@ function buildFileTree(inPath) {
             }
         }
 
-        if (!isTextFile) {
-            return null
-        }
 
         let codeTypeName
 
